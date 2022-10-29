@@ -1,0 +1,53 @@
+%VisualHullMeshAloy
+close all
+clear all
+drawnow
+
+if 3 ~= exist( 'VisualHullTriMeshMex', 'file' ) 
+   disp('The mex file VisualHullTriMeshMex needs to be created for your system') 
+   disp('Press any key to try to do this')
+   pause
+   CompileVisualHullTriMeshMex;
+end
+    
+
+
+imgCell = cell(size(cameraVec));
+dirname = fileparts(which(mfilename));
+for viewLoop = 1:length(cameraVec),
+    imgFilename = sprintf('%s/aloy_hull/sil_%d.png', dirname, viewLoop);
+    disp(imgFilename)
+    im = imread(imgFilename);
+    imgCell{viewLoop} = double(im);
+    cameraVec(viewLoop).height = size(im, 1); %#ok<SAGROW>
+    cameraVec(viewLoop).width = size(im, 2); %#ok<SAGROW>
+end
+
+
+figure, cameratoolbar, axis off, axis vis3d, axis equal, set(gcf, 'renderer', 'zbuffer')
+cameratoolbar('ResetCameraAndSceneLight'), cameratoolbar togglescenelight
+DisplayCamerasTwo( cameraVec )
+
+%now we compute the visual hull:
+[pMesh, kMesh] = VisualHullTriMesh( cameraVec, imgCell );
+
+fovBound = CommonFovBoundBox( cameraVec );
+patch('Faces', convhulln(fovBound'), 'Vertices', fovBound', 'FaceColor', 'none', 'EdgeColor', 'k');
+patch('Faces', kMesh', 'Vertices', pMesh', 'FaceColor', 'g', 'EdgeColor', 'none');
+set(gcf, 'Name', 'Visual Hull, Common Field Of View, and Cameras')
+
+figure, cameratoolbar, axis off, axis vis3d, axis equal, set(gcf, 'renderer', 'zbuffer')
+cameratoolbar('ResetCameraAndSceneLight'), cameratoolbar togglescenelight
+patch('Faces', kMesh', 'Vertices', pMesh', 'FaceColor', 'g', 'EdgeColor', 'none');
+patch('Faces', convhulln(fovBound'), 'Vertices', fovBound', 'FaceColor', 'none', 'EdgeColor', 'k');
+set(gcf, 'Name', 'Visual Hull and Common Field Of View')
+
+figure, cameratoolbar, axis off, axis vis3d, axis equal, set(gcf, 'renderer', 'zbuffer')
+cameratoolbar('ResetCameraAndSceneLight'), cameratoolbar togglescenelight
+patch('Faces', kMesh', 'Vertices', pMesh', 'FaceColor', 'g', 'EdgeColor', 'none');
+set(gcf, 'Name', 'Visual Hull')
+
+dog_mesh = triangulation(kMesh', pMesh');
+stlwrite(dog_mesh, 'aloy.stl')
+
+
